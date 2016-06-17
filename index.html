@@ -1,0 +1,127 @@
+<html>
+
+<head>
+
+    <script src="https://code.jquery.com/jquery.min.js"></script>
+    <!--<script src="https://code.jquery.com/jquery-1.10.2.js"></script>-->
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+
+</head>
+
+<body>
+    <div class="alert alert-info">
+        As a last step, create an independent html page that uses Javascript / jQuery to login to the REST API, add a new product and request details from one of those added products.
+    </div>
+
+
+    <div class="container">
+        <h2>ETF Entry Form</h2>
+        <form class="form-inline" id="etf-form" role="form">
+            <div class="form-group">
+                <label for="ticker">Ticker:</label>
+                <input type="text" class="form-control" id="ticker" placeholder="Enter Ticker">
+            </div>
+            <div class="form-group">
+                <label for="name">Name:</label>
+                <input type="text" class="form-control" id="name" placeholder="Enter Name">
+            </div>
+            <button type="submit" class="btn btn-default">Submit</button>
+        </form>
+    </div>
+
+    <!--container for ETF table-->
+    <div id="etf-list"></div>
+
+    <script>
+        /* global $ */
+
+        var apiEtfUrl = "https://api-demo-993ea.firebaseio.com/etfs.json";
+        var apiAdvUrl = "https://api-demo-993ea.firebaseio.com/advisors.json";
+        // TODO bearer authentication missing, API is public
+
+        // action when etf-form is submit
+        $("#etf-form").submit(function() {
+            // form validation
+            if (!($("#name").val()) || !($("#ticker").val())) {
+                alert("Ticker and Name required");
+                return false;
+            }
+            
+            
+            // get the form values, add to an object to be posted to db
+            var name = $("#name").val();
+            var ticker = $("#ticker").val();
+
+            var newEtf = {
+                name: name,
+                ticker: ticker
+            }
+
+            // post to the database
+            $.ajax({
+                url: apiEtfUrl,
+                type: "POST",
+                data: JSON.stringify(newEtf),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function(data) {
+                    // console.log(data)
+                    // console.log('posted new entry to database')
+                }
+            })
+
+            // reset the form
+            return;
+        });
+
+
+        // retrive ETF data from API, render as table
+        // could also use $.getJSON(url, fn) but will need to include headers for auth
+        $.ajax({
+            url: apiEtfUrl,
+            type: "GET",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function(data) {
+                // first html elements in table added to array
+                var items = ["<thread><tr><th></th><th>Ticker</th><th>Name</th></tr></thread>"];
+
+                // render each table row, push to array, each rendered item needs unique key
+                $.each(data, function(key, obj) {
+                    items.push("<tr id='1" + key + "'><td><button id='" + key + "' class='btn btn-sm btn-primary' onClick='clickEtf(this.id)'>details</button></td><td>" + obj.ticker + "</td><td>" + obj.name + "</td></tr>");
+                });
+
+                // join all elements in the array as html
+                $("<table/>", {
+                    "class": "table table-striped",
+                    html: items.join("")
+                }).appendTo("#etf-list");
+            }
+        })
+
+
+        // click the button to the left of each Etf
+        function clickEtf(id) {
+            // TODO problems querying the API with params, so get entire object and filter here
+            $.ajax({
+                url: apiEtfUrl,
+                type: "GET",
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function(obj) {
+                    $.each(obj, function(key, obj) {
+                        if (key === id) {
+                            // not ideal to use alert, should use modal or redirect to another page
+                            alert(obj.ticker + '\n' + obj.name)
+                        }
+                    })
+                }
+            })
+        };
+        
+        
+    </script>
+</body>
+
+</html>
