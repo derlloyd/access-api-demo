@@ -13,10 +13,36 @@
     <div class="alert alert-info">
         As a last step, create an independent html page that uses Javascript / jQuery to login to the REST API, add a new product and request details from one of those added products.
     </div>
-
-
+    <h1>Welcome to the ETF/Advisor API</h1>
+    
     <div class="container">
-        <h2>ETF Entry Form</h2>
+            <h3>Login or Signup for Token</h3>
+            <form class="form-inline" id="login-form" role="form">
+                <div class="form-group">
+                    <label for="username">Username:</label>
+                    <input type="text" class="form-control" id="username" placeholder="Enter Username">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <input type="password" class="form-control" id="password" placeholder="Enter Password">
+                </div>
+                <button type="submit" class="btn btn-default">Login</button>
+                <button type="submit" class="btn btn-default">Signup</button>
+            </form>
+        </div>
+        
+    <div class="container">
+        <h3>Or Enter Token</h3>
+        <form class="form-inline" id="token-form" role="form">
+                <div class="form-group">
+                    <label for="token">API token:</label>
+                    <input type="text" class="form-control" id="token" placeholder="Enter Access Token">
+                </div>
+            </form>
+        </div>
+        
+    <div class="container">
+        <h3>ETF Entry Form</h3>
         <form class="form-inline" id="etf-form" role="form">
             <div class="form-group">
                 <label for="ticker">Ticker:</label>
@@ -36,10 +62,11 @@
     <script>
         /* global $ */
 
-        var apiEtfUrl = "https://api-demo-993ea.firebaseio.com/etfs.json";
-        var apiAdvUrl = "https://api-demo-993ea.firebaseio.com/advisors.json";
+        var apiEtfUrl = "https://api-demo-derlloyd.c9users.io/api/etfs";
+        var apiAdvUrl = "https://api-demo-derlloyd.c9users.io/api/advisors";
         // TODO bearer authentication missing, API is public
-
+        var token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyIkX18iOnsic3RyaWN0TW9kZSI6dHJ1ZSwiZ2V0dGVycyI6e30sIndhc1BvcHVsYXRlZCI6ZmFsc2UsImFjdGl2ZVBhdGhzIjp7InBhdGhzIjp7Il9fdiI6ImluaXQiLCJwYXNzd29yZCI6ImluaXQiLCJuYW1lIjoiaW5pdCIsIl9pZCI6ImluaXQifSwic3RhdGVzIjp7Imlnbm9yZSI6e30sImRlZmF1bHQiOnt9LCJpbml0Ijp7Il9fdiI6dHJ1ZSwicGFzc3dvcmQiOnRydWUsIm5hbWUiOnRydWUsIl9pZCI6dHJ1ZX0sIm1vZGlmeSI6e30sInJlcXVpcmUiOnt9fSwic3RhdGVOYW1lcyI6WyJyZXF1aXJlIiwibW9kaWZ5IiwiaW5pdCIsImRlZmF1bHQiLCJpZ25vcmUiXX0sImVtaXR0ZXIiOnsiZG9tYWluIjpudWxsLCJfZXZlbnRzIjp7fSwiX2V2ZW50c0NvdW50IjowLCJfbWF4TGlzdGVuZXJzIjowfX0sImlzTmV3IjpmYWxzZSwiX2RvYyI6eyJfX3YiOjAsInBhc3N3b3JkIjoiMTIzIiwibmFtZSI6IkRlcmVrIiwiX2lkIjoiNTc2NDA5OWM3OGIzOGUwMjJhNTJlOTViIn0sIl9wcmVzIjp7IiRfX29yaWdpbmFsX3NhdmUiOltudWxsLG51bGxdLCIkX19vcmlnaW5hbF9yZW1vdmUiOltudWxsXX0sIl9wb3N0cyI6eyIkX19vcmlnaW5hbF9zYXZlIjpbXSwiJF9fb3JpZ2luYWxfcmVtb3ZlIjpbXX0sImlhdCI6MTQ2NjE3NDMxOX0.pPZpxib33IA4_dEoGYB2rHWco9F16kwjPiQt5GaeKcs"
+        var tokenUrl = apiEtfUrl + '?token='+token;
         // action when etf-form is submit
         $("#etf-form").submit(function() {
             // form validation
@@ -62,7 +89,7 @@
             $.ajax({
                 url: apiEtfUrl,
                 type: "POST",
-                data: JSON.stringify(newEtf),
+                data: newEtf,
                 contentType: "application/json; charset=utf-8",
                 dataType: "json",
                 success: function(data) {
@@ -79,11 +106,15 @@
         // retrive ETF data from API, render as table
         // could also use $.getJSON(url, fn) but will need to include headers for auth
         $.ajax({
-            url: apiEtfUrl,
+            url: tokenUrl,
             type: "GET",
-            contentType: "application/json; charset=utf-8",
-            dataType: "json",
+            // contentType: "application/json; charset=utf-8",
+            // headers: { 'x-access-token': token },  --no impact
+            // dataType: "json", --no impact
             success: function(data) {
+                
+                // $("<p/>", {data}).appendTo("#etf-list");
+                
                 // first html elements in table added to array
                 var items = ["<thread><tr><th></th><th>Ticker</th><th>Name</th></tr></thread>"];
 
@@ -92,11 +123,14 @@
                     items.push("<tr id='1" + key + "'><td><button id='" + key + "' class='btn btn-sm btn-primary' onClick='clickEtf(this.id)'>details</button></td><td>" + obj.ticker + "</td><td>" + obj.name + "</td></tr>");
                 });
 
+                
+
                 // join all elements in the array as html
                 $("<table/>", {
                     "class": "table table-striped",
                     html: items.join("")
                 }).appendTo("#etf-list");
+                
             }
         })
 
