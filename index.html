@@ -13,10 +13,10 @@
     <div class="alert alert-info">
         As a last step, create an independent html page that uses Javascript / jQuery to login to the REST API, add a new product and request details from one of those added products.
     </div>
-    <h1>Welcome to the ETF/Advisor API</h1>
+    <h1>Welcome to the ETF/Advisor External Website</h1>
     
     <div class="container">
-            <h3>Login or Signup for Token</h3>
+            <h3>Login or Signup to Add</h3><h4 id='login-error-message'></h4>
             <form class="form-inline" id="login-form" role="form">
                 <div class="form-group">
                     <label for="username">Username:</label>
@@ -31,18 +31,18 @@
             </form>
         </div>
         
-    <div class="container">
-        <h3>Or Enter Token</h3>
-        <form class="form-inline" id="token-form" role="form">
-                <div class="form-group">
-                    <label for="token">API token:</label>
-                    <input type="text" class="form-control" id="token" placeholder="Enter Access Token">
-                </div>
-            </form>
-        </div>
+    <!--<div class="container">-->
+    <!--    <h3>Or Enter Token</h3>-->
+    <!--    <form class="form-inline" id="token-form" role="form">-->
+    <!--            <div class="form-group">-->
+    <!--                <label for="token">API token:</label>-->
+    <!--                <input type="text" class="form-control" id="token" placeholder="Enter Access Token">-->
+    <!--            </div>-->
+    <!--        </form>-->
+    <!--    </div>-->
         
     <div class="container">
-        <h3>ETF Entry Form</h3>
+        <h3>ETF Entry Form</h3><h4 id='etf-error-message'>000</h4>
         <form class="form-inline" id="etf-form" role="form">
             <div class="form-group">
                 <label for="ticker">Ticker:</label>
@@ -58,22 +58,23 @@
 
     <!--container for ETF table-->
     <div id="etf-list"></div>
-    <p id="test1">This is a paragraph.</p>
+   
     <script>
         /* global $ */
 
-        var apiEtfUrl = "https://api-demo-derlloyd.c9users.io/api/etfs";
-        var apiAdvUrl = "https://api-demo-derlloyd.c9users.io/api/advisors";
+        var apiEtfUrl = "https://angular-app-derlloyd.c9users.io/api/etfs";
+        // var apiAdvUrl = "https://angular-app-derlloyd.c9users.io/api/advisors";
         // TODO bearer authentication missing, API is public
-        var token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyIkX18iOnsic3RyaWN0TW9kZSI6dHJ1ZSwiZ2V0dGVycyI6e30sIndhc1BvcHVsYXRlZCI6ZmFsc2UsImFjdGl2ZVBhdGhzIjp7InBhdGhzIjp7Il9fdiI6ImluaXQiLCJwYXNzd29yZCI6ImluaXQiLCJuYW1lIjoiaW5pdCIsIl9pZCI6ImluaXQifSwic3RhdGVzIjp7Imlnbm9yZSI6e30sImRlZmF1bHQiOnt9LCJpbml0Ijp7Il9fdiI6dHJ1ZSwicGFzc3dvcmQiOnRydWUsIm5hbWUiOnRydWUsIl9pZCI6dHJ1ZX0sIm1vZGlmeSI6e30sInJlcXVpcmUiOnt9fSwic3RhdGVOYW1lcyI6WyJyZXF1aXJlIiwibW9kaWZ5IiwiaW5pdCIsImRlZmF1bHQiLCJpZ25vcmUiXX0sImVtaXR0ZXIiOnsiZG9tYWluIjpudWxsLCJfZXZlbnRzIjp7fSwiX2V2ZW50c0NvdW50IjowLCJfbWF4TGlzdGVuZXJzIjowfX0sImlzTmV3IjpmYWxzZSwiX2RvYyI6eyJfX3YiOjAsInBhc3N3b3JkIjoiMTIzIiwibmFtZSI6IkRlcmVrIiwiX2lkIjoiNTc2NDA5OWM3OGIzOGUwMjJhNTJlOTViIn0sIl9wcmVzIjp7IiRfX29yaWdpbmFsX3NhdmUiOltudWxsLG51bGxdLCIkX19vcmlnaW5hbF9yZW1vdmUiOltudWxsXX0sIl9wb3N0cyI6eyIkX19vcmlnaW5hbF9zYXZlIjpbXSwiJF9fb3JpZ2luYWxfcmVtb3ZlIjpbXX0sImlhdCI6MTQ2NjE3NDMxOX0.pPZpxib33IA4_dEoGYB2rHWco9F16kwjPiQt5GaeKcs"
-        var tokenEtfUrl = apiEtfUrl + '?token='+token;
-        var tokenAdvUrl = apiAdvUrl + '?token='+token;
+        // var token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyIkX18iOnsic3RyaWN0TW9kZSI6dHJ1ZSwiZ2V0dGVycyI6e30sIndhc1BvcHVsYXRlZCI6ZmFsc2UsImFjdGl2ZVBhdGhzIjp7InBhdGhzIjp7Il9fdiI6ImluaXQiLCJwYXNzd29yZCI6ImluaXQiLCJuYW1lIjoiaW5pdCIsIl9pZCI6ImluaXQifSwic3RhdGVzIjp7Imlnbm9yZSI6e30sImRlZmF1bHQiOnt9LCJpbml0Ijp7Il9fdiI6dHJ1ZSwicGFzc3dvcmQiOnRydWUsIm5hbWUiOnRydWUsIl9pZCI6dHJ1ZX0sIm1vZGlmeSI6e30sInJlcXVpcmUiOnt9fSwic3RhdGVOYW1lcyI6WyJyZXF1aXJlIiwibW9kaWZ5IiwiaW5pdCIsImRlZmF1bHQiLCJpZ25vcmUiXX0sImVtaXR0ZXIiOnsiZG9tYWluIjpudWxsLCJfZXZlbnRzIjp7fSwiX2V2ZW50c0NvdW50IjowLCJfbWF4TGlzdGVuZXJzIjowfX0sImlzTmV3IjpmYWxzZSwiX2RvYyI6eyJfX3YiOjAsInBhc3N3b3JkIjoiMTIzIiwibmFtZSI6IkRlcmVrIiwiX2lkIjoiNTc2NDA5OWM3OGIzOGUwMjJhNTJlOTViIn0sIl9wcmVzIjp7IiRfX29yaWdpbmFsX3NhdmUiOltudWxsLG51bGxdLCIkX19vcmlnaW5hbF9yZW1vdmUiOltudWxsXX0sIl9wb3N0cyI6eyIkX19vcmlnaW5hbF9zYXZlIjpbXSwiJF9fb3JpZ2luYWxfcmVtb3ZlIjpbXX0sImlhdCI6MTQ2NjE3NDMxOX0.pPZpxib33IA4_dEoGYB2rHWco9F16kwjPiQt5GaeKcs"
+        // var tokenEtfUrl = apiEtfUrl + '?token='+token;
+        // var tokenAdvUrl = apiAdvUrl + '?token='+token;
         
         // action when etf-form is submit
         $("#etf-form").submit(function() {
             // form validation
             if (!($("#name").val()) || !($("#ticker").val())) {
-                alert("Ticker and Name required");
+                $("#etf-error-message#").val("123"); // = "123456";
+                // alert("Ticker and Name required");
                 return false;
             }
             
@@ -83,76 +84,74 @@
             var ticker = $("#ticker").val();
 
             var newEtf = {
+                created_by: '',
+                created_at: Date.now(),
                 name: name,
                 ticker: ticker
             }
-
+            
+            console.log('post ' + newEtf + 'to db')
             // post to the database
-            $.ajax({
-                url: apiEtfUrl,
-                type: "POST",
-                data: newEtf,
-                contentType: "application/json; charset=utf-8",
-                dataType: "json",
-                success: function(data) {
-                    // console.log(data)
-                    // console.log('posted new entry to database')
-                }
-            })
+            // $.ajax({
+            //     url: apiEtfUrl,
+            //     type: "POST",
+            //     data: newEtf,
+            //     contentType: "application/json; charset=utf-8",
+            //     dataType: "json",
+            //     success: function(data) {
+            //         console.log(data)
+            //         console.log('posted new entry to database')
+            //     }
+            // })
 
             // reset the form
-            return;
+            return false;
         });
 
 
         // retrive ETF data from API, render as table
         // could also use $.getJSON(url, fn) but will need to include headers for auth
         $.ajax({
-            url: "https://api-demo-derlloyd.c9users.io/",
+            url: apiEtfUrl,
             type: "GET",
             // contentType: "application/json; charset=utf-8",
             // headers: { 'x-access-token': token },  --no impact
             dataType: "json",
-            error: console.log("request failed"),
             success: function(data) {
-                console.log("success", data)
+                // console.log("success", data)
                 // $("<p/>", {data}).appendTo("#etf-list");
-    /*            
+               
                 // first html elements in table added to array
                 var items = ["<thread><tr><th></th><th>Ticker</th><th>Name</th></tr></thread>"];
 
                 // render each table row, push to array, each rendered item needs unique key
                 $.each(data, function(key, obj) {
-                    items.push("<tr id='1" + key + "'><td><button id='" + key + "' class='btn btn-sm btn-primary' onClick='clickEtf(this.id)'>details</button></td><td>" + obj.ticker + "</td><td>" + obj.name + "</td></tr>");
+                    // each row rendered has a unique id
+                    // containing a button whose id is the _id of the ETF, passed as this.id to onClick
+                    items.push("<tr id='" + key + "'><td><button id='" + obj._id + "' class='btn btn-sm btn-primary' onClick='clickEtf(this.id)'>details</button></td><td>" + obj.ticker + "</td><td>" + obj.name + "</td></tr>");
                 });
 
-                $("#test1").val(data)
-
-                // join all elements in the array as html
+                // join all elements in the array as html 
                 $("<table/>", {
                     "class": "table table-striped",
                     html: items.join("")
                 }).appendTo("#etf-list");
-  */              
+              
             }
         })
 
 
         // click the button to the left of each Etf
         function clickEtf(id) {
-            // TODO problems querying the API with params, so get entire object and filter here
+            // ajax call with id as param to get specific etf
             $.ajax({
-                url: apiEtfUrl,
+                url: apiEtfUrl + '/' + id,
                 type: "GET",
                 contentType: "application/json; charset=utf-8",
                 dataType: "json",
                 success: function(obj) {
-                    $.each(obj, function(key, obj) {
-                        if (key === id) {
-                            // not ideal to use alert, should use modal or redirect to another page
-                            alert(obj.ticker + '\n' + obj.name)
-                        }
-                    })
+                    // retrieved object, TODO should use modal or redirect to another page to edit
+                    alert(obj.ticker + '\n' + obj.name);
                 }
             })
         };
