@@ -13,7 +13,7 @@
     <div class="alert alert-info">
         As a last step, create an independent html page that uses Javascript / jQuery to login to the REST API, add a new product and request details from one of those added products.
     </div>
-    <h1>Welcome to the ETF/Advisor External Website</h1>
+    <h1>ETF External Website</h1>
     
     <div class="container">
             <h3 id="not-logged-in-header">Login or Signup to Add</h3>
@@ -122,7 +122,7 @@
                     $.each(data, function(key, obj) {
                         // each row rendered has a unique id
                         // containing a button whose id is the _id of the ETF, passed as this.id to onClick
-                        items.push("<tr id='" + key + "'><td><button id='" + obj._id + "' class='btn btn-sm btn-primary' onClick='clickEtf(this.id)'>details</button></td><td>" + obj.ticker + "</td><td>" + obj.name + "</td></tr>");
+                        items.push("<tr id='" + key + "'><td><button id='" + obj._id + "' class='btn btn-sm btn-primary' onClick='clickEtf(this.id)'>details</button><button class='btn btn-sm btn-danger' onClick='clickDeleteEtf(this.id)'>delete</button></td><td>" + obj.ticker + "</td><td>" + obj.name + "</td></tr>");
                     });
     
                     // join all elements in the array as html 
@@ -207,14 +207,14 @@
                 }
             })
             
-            // reset the form
-            $("#name").val("");
-            $("#ticker").val("");
+            // // reset the form
+            // $("#name").val("");
+            // $("#ticker").val("");
             
-            // refresh the list
-            renderEtfTable()
+            // // refresh the list
+            // renderEtfTable()
             
-            return;
+            // return;
         };
         
         function clickSignup() {
@@ -224,12 +224,50 @@
             // console.log($("#username").val() + $("#password").val())
             // send a post request to api/signup
             
+            // if err return err
+            // if ok, save token somewhere
             
+            // get the form values, add to an object to be posted to db
+            var user = {
+                username: $("#username").val(),
+                password: $("#password").val()
+            };
             
-            
-            
-            
-            
+            // post to the database
+            $.ajax({
+                url: signupUrl,
+                type: "POST",
+                data: user,
+                error: function(err) {
+                    console.log("Error with AJAX call", err);
+                },
+                success: function(obj, status) {
+                    // status should be success if API is functional
+                    if (status !== "success") {
+                        $("#login-error-message").html("<b>API Error - contact administrator</b>");
+                        return;
+                    };
+                    
+                    if (obj.state === "failure") {
+                        $("#login-error-message").html("<b>" + obj.message + "</b>");
+                        return;
+                    };
+                    
+                    if (obj.state === "success") {
+                        
+                        console.log("signup successful");
+                        loggedInDisplay();
+                        
+                        return;
+                        
+                    } else {
+                        // some other undefined error
+                        $("#login-error-message").html("<b>" + obj.message + "</b>");
+                        console.log(status, obj)
+                        return;
+                    }
+                }
+            })
         };
         
         
@@ -290,20 +328,32 @@
                 url: apiEtfUrl,
                 type: "POST",
                 data: newEtf,
-                // contentType: "application/json; charset=utf-8",
-                // dataType: "json",
                 success: function(data) {
                     console.log(data)
-                    console.log('posted new entry to database')
-                    
-                    // reset the form
-                    $("#name").val("");
-                    $("#ticker").val("");
-                    
-                    // refresh the table
-                    renderEtfTable();
-                    
-                    return;
+
+                    if (data.state === "success") {
+                        // reset the form
+                        $("#name").val("");
+                        $("#ticker").val("");
+                        
+                        // flash success message
+                        $("#etf-error-message").html("ETF Created");
+                        setTimeout(function() {
+                            $("#etf-error-message").html("");
+                        }, 2000);
+                        
+                        // refresh the table
+                        renderEtfTable();
+                        
+                        return;
+                        
+                    } else {
+                        // flash fail message
+                        $("#etf-error-message").html("ETF creation fail: " + data.message);
+                        setTimeout(function() {
+                            $("#etf-error-message").html("");
+                        }, 2000);
+                    }
                 }
             })
             
@@ -325,6 +375,27 @@
             })
         };
         
+        // click the details button to the left of each Etf
+        function clickDeleteEtf(id) {
+            
+            if (confirm("Delete ETF?")) {
+                // delete etf
+                // ajax call with id as param to delete specific etf
+                $.ajax({
+                    url: apiEtfUrl + '/' + id,
+                    type: "DELETE",
+                    success: function(obj) {
+                        // retrieved object, TODO should use modal or redirect to another page to edit
+                        alert(obj.message);
+                        renderEtfTable() 
+                    }
+                });    
+                
+            } else {
+                // user did not confirm, cancel
+                return;
+            }
+        };
         
     </script>
 </body>
