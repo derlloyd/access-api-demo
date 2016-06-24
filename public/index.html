@@ -3,7 +3,6 @@
 <head>
     <title>ETF Website</title>
     <script src="https://code.jquery.com/jquery.min.js"></script>
-    <!--<script src="https://code.jquery.com/jquery-1.10.2.js"></script>-->
     <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
 
@@ -95,6 +94,36 @@
         var tokenCookie = getCookie('TOKEN');
         // console.log("token cookie: ", tokenCookie);
         
+        // initial function to run if cookies present
+        function getUserFromToken() {
+            // token should be in cookies, so start with ajax call
+            $.ajax({
+                url: getuserUrl + "?token=" + tokenCookie,
+                type: "GET",
+                // dataType: "json",   
+                error: function(err) {
+                    console.log(err);
+                },
+                success: function(obj) {
+                    // obj should be {state: "success", user: Object, message: "user info retrieved"}
+                   if (obj.state === 'success') {
+                        // append user info to username and password fields
+                        $("#username").val(obj.user.username);
+                        // password is already hashed
+                        $("#password").val(obj.user.password);
+                        
+                        // invoke login function
+                        clickLogin()
+                        
+                        return;
+                   } else {
+                       // unable to get user info
+                       return;
+                   }
+                }
+            });
+        };
+        
         function nonLoggedInDisplay() {
             // non-logged in button and form states
             $("#not-logged-in-header").show();
@@ -127,45 +156,12 @@
             $("#etf-list").show();
         };
         
-        // initial function to run if cookies present
-        function getUserFromToken() {
-            // token should be in cookies, so start with ajax call
-            $.ajax({
-                url: getuserUrl + "?token=" + tokenCookie,
-                type: "GET",
-                // dataType: "json",   
-                error: function(err) {
-                    console.log(err);
-                },
-                success: function(obj) {
-                    // obj should be {state: "success", user: Object, message: "user info retrieved"}
-                   if (obj.state === 'success') {
-                        // append user info to username and password fields
-                        $("#username").val(obj.user.username);
-                        // password is already hashed
-                        $("#password").val(obj.user.password);
-                        
-                        // invoke login function
-                        clickLogin()
-                        
-                        return;
-                   } else {
-                       // unable to get user info
-                       return;
-                   }
-                }
-            });
-        };
-        
-        
-        
         
         // function to populate ETF table with list of ETFs
         function renderEtfTable() {
             // clear current table
             $("#etf-list").empty();
             // retrive ETF data from API, render as table
-            // could also use $.getJSON(url, fn) but will need to include headers for auth
             $.ajax({
                 url: apiEtfUrl + "?token=" + $("#token").val(),
                 type: "GET",
@@ -197,7 +193,7 @@
             return;
         });
         
-        // form validation, username and password must be values
+        // login/signup form validation, username and password must be values
         function areUsernameAndPasswordEntered() {
             if (!($("#username").val()) || !($("#password").val())) {
                 $("#login-error-message").html("<b>Username and password required</b>");
@@ -210,10 +206,10 @@
         };
         
         function clickLogin() {
+            // check if form is complete
             if (areUsernameAndPasswordEntered() === false) {
                 return;
             }
-            // send a post request to api/login
             
             // get the form values, add to an object to be posted to db
             var user = {
@@ -253,12 +249,14 @@
                         $("#login-error-message").html("");
                         // console.log("login successful");
                         loggedInDisplay();
-                        // add value of token to field
+                        
+                        // display token value
                         $("#token").val(obj.token);
                         // add token to cookie
                         var newCookie = "TOKEN="+obj.token;
                         document.cookie=newCookie;
-                        console.log("cookie:", document.cookie);
+                        // console.log("cookie:", document.cookie);
+                        
                         renderEtfTable(); 
                         
                         return;
@@ -277,14 +275,10 @@
         };
         
         function clickSignup() {
+            // check if form is complete
             if (areUsernameAndPasswordEntered() === false) {
                 return;
             }
-            // send a post request to api/signup
-            
-            // if err return err
-            // if ok, save token somewhere
-            
             // get the form values, add to an object to be posted to db
             var user = {
                 username: $("#username").val(),
@@ -324,11 +318,13 @@
                         // console.log("signup successful");
                         loggedInDisplay();
                         
+                        // display token info
                         $("#token").val(obj.token);
                         // add token to cookie
                         var newCookie = "TOKEN="+obj.token;
-                        document.cookie=newCookie;
-                        console.log("cookie:", document.cookie);
+                        document.cookie = newCookie;
+                        // console.log("cookie:", document.cookie);
+                        
                         renderEtfTable(); 
                         return;
                         
@@ -467,7 +463,7 @@
             }
         };
         
-        // default state
+        // default non-logged-in state
         nonLoggedInDisplay();
         
         if (tokenCookie) {
