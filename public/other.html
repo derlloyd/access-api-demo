@@ -1,0 +1,482 @@
+<html>
+
+<head>
+    <title>ETF Website</title>
+    <script src="https://code.jquery.com/jquery.min.js"></script>
+    <!--<script src="https://code.jquery.com/jquery-1.10.2.js"></script>-->
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+
+</head>
+
+<body>
+    <div class="alert alert-info">
+        As a last step, create an independent html page that uses Javascript / jQuery to login to the REST API, add a new product and request details from one of those added products.
+    </div>
+    <h1>ETF External Website</h1>
+    
+        <div class="container">
+            <h3 id="not-logged-in-header">Login or Signup to View/Add/Delete</h3>
+            <h3 id="logged-in-header">Logged In</h3>
+            <h4 id='login-error-message'></h4>
+            <form class="form-inline" id="login-form" role="form">
+                <div class="form-group">
+                    <label for="username">Username:</label>
+                    <input type="text" class="form-control" id="username" placeholder="Enter Username">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <input type="password" class="form-control" id="password" placeholder="Enter Password">
+                </div>
+                <button id="login-button" onClick="clickLogin()"  class="btn btn-primary">Login</button>
+                <button id="signup-button" onClick="clickSignup()" class="btn btn-primary">Signup</button>
+                <button id="signout-button" onClick="clickLogout()" class="btn btn-warning">Logout</button>
+            
+                <br/>
+                <br/>
+                <div class="form-group" id="token-form-group">
+                    <label for="token">API token:</label>
+                    <input type="text" class="form-control" id="token" placeholder="Access Token">
+                </div>
+            
+            </form>
+        </div>
+        
+    <div class="container" id="etf-form-container">
+        <h3>ETF Entry Form</h3>
+        <h3 id="etf-error-message" ></h3>
+        <form class="form-inline" id="etf-form" role="form">
+            <div class="form-group">
+                <label for="ticker">Ticker:</label>
+                <input type="text" class="form-control" id="ticker" placeholder="Enter Ticker">
+            </div>
+            <div class="form-group">
+                <label for="name">Name:</label>
+                <input type="text" class="form-control" id="name" placeholder="Enter Name">
+            </div>
+            <button onClick="submitEtfForm()" class="btn btn-primary">Submit</button>
+        </form>
+    </div>
+
+    <!--container for ETF table-->
+    <div id="etf-list"></div>
+   
+    <script>
+        /* global $ */
+
+        var apiUrl = "https://angular-app-derlloyd.c9users.io";
+        var loginUrl = apiUrl + "/auth/login";
+        var signupUrl = apiUrl + "/auth/signup";
+        var signoutUrl = apiUrl + "/auth/signout";
+        var getuserUrl = apiUrl + "/auth/getuser";
+        var apiEtfUrl = apiUrl + "/api/etfs";
+        var tokenUrlQuery = "?token=" + $("#token").val();
+        
+        // get all cookies, find the TOKEN value
+        // document.cookie is a string cookie1=value; cookie2=value; cookie3=value;
+        // need to split it
+        function getCookie(cookieName) {
+            var name = cookieName + "=";
+            var cookieArray = document.cookie.split(';');
+            for(var i = 0; i <cookieArray.length; i++) {
+                var c = cookieArray[i];
+                while (c.charAt(0)==' ') {
+                    c = c.substring(1);
+                }
+                // if cookie found, return value
+                if (c.indexOf(name) == 0) {
+                    return c.substring(name.length,c.length);
+                }
+            }
+            return "";
+        }
+        
+        // get cookie with name TOKEN
+        var tokenCookie = getCookie('TOKEN');
+        // console.log("token cookie: ", tokenCookie);
+        
+        function nonLoggedInDisplay() {
+            // non-logged in button and form states
+            $("#not-logged-in-header").show();
+            $("#logged-in-header").hide();
+            $("#username").val("");
+            $("#password").val("");
+            $("#username").prop('disabled', false);
+            $("#password").prop('disabled', false);
+            $("#login-button").show();
+            $("#signup-button").show();
+            $("#signout-button").hide();
+            $("#token-form-group").hide();
+            $("#etf-form-container").hide();
+            $("#etf-list").hide();
+        };
+        
+        
+        function loggedInDisplay() {        
+            // logged in button and form states, could also use toggle()
+            $("#not-logged-in-header").hide();
+            $("#logged-in-header").show();
+            $("#username").prop('disabled', true);
+            $("#password").prop('disabled', true);
+            $("#login-button").hide();
+            $("#signup-button").hide();
+            $("#signout-button").show();
+            $("#token-form-group").show();
+            $("#token").prop('disabled', true);
+            $("#etf-form-container").show();
+            $("#etf-list").show();
+        };
+        
+        // initial function to run if cookies present
+        function getUserFromToken() {
+            // token should be in cookies, so start with ajax call
+            $.ajax({
+                url: getuserUrl + "?token=" + tokenCookie,
+                type: "GET",
+                // dataType: "json",   
+                error: function(err) {
+                    console.log(err);
+                },
+                success: function(obj) {
+                    // obj should be {state: "success", user: Object, message: "user info retrieved"}
+                   if (obj.state === 'success') {
+                        // append user info to username and password fields
+                        $("#username").val(obj.user.username);
+                        // password is already hashed
+                        $("#password").val(obj.user.password);
+                        
+                        // invoke login function
+                        clickLogin()
+                        
+                        return;
+                   } else {
+                       // unable to get user info
+                       return;
+                   }
+                }
+            });
+        };
+        
+        
+        
+        
+        // function to populate ETF table with list of ETFs
+        function renderEtfTable() {
+            // clear current table
+            $("#etf-list").empty();
+            // retrive ETF data from API, render as table
+            // could also use $.getJSON(url, fn) but will need to include headers for auth
+            $.ajax({
+                url: apiEtfUrl + "?token=" + $("#token").val(),
+                type: "GET",
+                dataType: "json",
+                success: function(data) {
+                   
+                    // first html elements in table added to array
+                    var items = ["<thread><tr><th></th><th>Ticker</th><th>Name</th></tr></thread>"];
+    
+                    // render each table row, push to array, each rendered item needs unique key
+                    $.each(data, function(key, obj) {
+                        // each row rendered has a unique id
+                        // containing a button whose id is the _id of the ETF, passed as this.id to onClick
+                        items.push("<tr id='" + key + "'><td><button id='" + obj._id + "' class='btn btn-sm btn-primary' onClick='clickEtf(this.id)'>details</button><button id='/" + obj._id + "' class='btn btn-sm btn-danger' onClick='clickDeleteEtf(this.id)'>delete</button></td><td>" + obj.ticker + "</td><td>" + obj.name + "</td></tr>");
+                    });
+    
+                    // join all elements in the array as html 
+                    $("<table/>", {
+                        "class": "table table-striped",
+                        html: items.join("")
+                    }).appendTo("#etf-list");
+                }
+            });
+        };
+        
+        // there is no submit action but just in case, prevent default action
+        $("#login-form").submit(function(e) {
+            e.preventDefault();
+            return;
+        });
+        
+        // form validation, username and password must be values
+        function areUsernameAndPasswordEntered() {
+            if (!($("#username").val()) || !($("#password").val())) {
+                $("#login-error-message").html("<b>Username and password required</b>");
+                return false;
+            };
+            
+            // if fields entered, make sure error message is hidden
+            $("#login-error-message").html("");
+            return true;
+        };
+        
+        function clickLogin() {
+            if (areUsernameAndPasswordEntered() === false) {
+                return;
+            }
+            // send a post request to api/login
+            
+            // get the form values, add to an object to be posted to db
+            var user = {
+                username: $("#username").val(),
+                password: $("#password").val()
+            };
+            
+            // post to the database
+            $.ajax({
+                url: loginUrl,
+                type: "POST",
+                data: user,
+                error: function(err) {
+                    console.log("Error with AJAX call", err);
+                },
+                success: function(obj, status) {
+                    // console.log(obj, status)
+                    // status should be success if API is functional
+                    if (status !== "success") {
+                        $("#login-error-message").html("<b>API Error - contact administrator</b>");
+                        setTimeout(function() {
+                            $("#login-error-message").html("");
+                        }, 4000);
+                        return;
+                    };
+                    
+                    if (obj.state === "failure") {
+                        $("#login-error-message").html("<b>" + obj.message + "</b>");
+                        setTimeout(function() {
+                            $("#login-error-message").html("");
+                        }, 4000);
+                        return;
+                    };
+                    
+                    if (obj.state === "success") {
+                        
+                        $("#login-error-message").html("");
+                        // console.log("login successful");
+                        loggedInDisplay();
+                        // add value of token to field
+                        $("#token").val(obj.token);
+                        // add token to cookie
+                        var newCookie = "TOKEN="+obj.token;
+                        document.cookie=newCookie;
+                        console.log("cookie:", document.cookie);
+                        renderEtfTable(); 
+                        
+                        return;
+                        
+                    } else {
+                        // some other undefined error
+                        $("#login-error-message").html("<b>" + obj.message + "</b>");
+                        setTimeout(function() {
+                            $("#login-error-message").html("");
+                        }, 4000);
+                        // console.log(status, obj)
+                        return;
+                    }
+                }
+            })
+        };
+        
+        function clickSignup() {
+            if (areUsernameAndPasswordEntered() === false) {
+                return;
+            }
+            // send a post request to api/signup
+            
+            // if err return err
+            // if ok, save token somewhere
+            
+            // get the form values, add to an object to be posted to db
+            var user = {
+                username: $("#username").val(),
+                password: $("#password").val()
+            };
+            
+            // post to the database
+            $.ajax({
+                url: signupUrl,
+                type: "POST",
+                data: user,
+                error: function(err) {
+                    console.log("Error with AJAX call", err);
+                },
+                success: function(obj, status) {
+                    console.log(obj, status);
+                    // status should be success if API is functional
+                    if (status !== "success") {
+                        $("#login-error-message").html("<b>API Error - contact administrator</b>");
+                        setTimeout(function() {
+                            $("#login-error-message").html("");
+                        }, 4000);
+                        return;
+                    };
+                    
+                    if (obj.state === "failure") {
+                        $("#login-error-message").html("<b>" + obj.message + "</b>");
+                        setTimeout(function() {
+                            $("#login-error-message").html("");
+                        }, 4000);
+                        return;
+                    };
+                    
+                    if (obj.state === "success") {
+                        
+                        $("#login-error-message").html("");
+                        // console.log("signup successful");
+                        loggedInDisplay();
+                        
+                        $("#token").val(obj.token);
+                        // add token to cookie
+                        var newCookie = "TOKEN="+obj.token;
+                        document.cookie=newCookie;
+                        console.log("cookie:", document.cookie);
+                        renderEtfTable(); 
+                        return;
+                        
+                    } else {
+                        // some other undefined error
+                        $("#login-error-message").html("<b>" + obj.message + "</b>");
+                        setTimeout(function() {
+                            $("#login-error-message").html("");
+                        }, 4000);
+                        console.log(status, obj)
+                        return;
+                    }
+                }
+            })
+        };
+        
+        
+        function clickLogout() {
+            $.ajax({
+                url: signoutUrl + "?token=" + $("#token").val(),
+                type: "GET",
+                // data: user,
+                error: function(err) {
+                    console.log("Error with AJAX call", err);
+                },
+                success: function(obj, status) {
+                    // remove token
+                    $("#token").val("");
+                    // remove cookie, set expiry as passed date
+                    document.cookie = "TOKEN=; expires=" + ( Date.now() - 100 );
+                    
+                    // console.log('client logged out');
+                    nonLoggedInDisplay();
+                }
+            })
+        };
+        
+        // there is no submit action but just in case, prevent default action
+        $("#etf-form").submit(function(e) {
+            e.preventDefault();
+            return;
+        });
+        
+        // when ETF Entry Form SUBMIT clicked
+        function submitEtfForm() {
+            // form validation, name and ticker must be values
+            if (!($("#name").val()) || !($("#ticker").val())) {
+                // console.log("info missing")
+                $("#etf-error-message").html("<b><mark>Ticker and Name required</mark></b>");
+                return;
+            };
+            
+            // if fields entered, make sure error message is hidden
+            $("#etf-error-message").html("");
+            
+            // create an object to be posted to db
+            var newEtf = {
+                created_by: $("#username").val(),
+                created_at: Date.now(),
+                name: $("#name").val(),
+                ticker: $("#ticker").val()
+            }
+            
+            // post to the database
+            $.ajax({
+                url: apiEtfUrl + "?token=" + $("#token").val(),
+                type: "POST",
+                data: newEtf,
+                success: function(data) {
+                    console.log(data)
+                    if (data.state === "success") {
+                        // reset the form
+                        $("#name").val("");
+                        $("#ticker").val("");
+                        
+                        // flash success message
+                        $("#etf-error-message").html("ETF Created");
+                        setTimeout(function() {
+                            $("#etf-error-message").html("");
+                        }, 4000);
+                        
+                        // refresh the table
+                        renderEtfTable();
+                        
+                        return;
+                        
+                    } else {
+                        // flash fail message
+                        $("#etf-error-message").html("ETF creation fail: " + data.message);
+                        setTimeout(function() {
+                            $("#etf-error-message").html("");
+                        }, 4000);
+                    }
+                }
+            })
+        };
+
+
+        // click the details button to the left of each Etf
+        function clickEtf(id) {
+            // ajax call with id as param to get specific etf
+            $.ajax({
+                url: apiEtfUrl + '/' + id + "?token=" + $("#token").val(),
+                type: "GET",
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function(obj) {
+                    // retrieved object, TODO should use modal or redirect to another page to edit
+                    alert("Ticker: " + obj.ticker + '\n' + "Name: "+ obj.name + '\n' + "Created by: "+ obj.created_by + '\n' + "Date: " + obj.created_at);
+                }
+            })
+        };
+        
+        // click the delete button to the left of each Etf
+        function clickDeleteEtf(id) {
+            // confirm with user with popup
+            // id contains "/"
+            if (confirm("Delete ETF?")) {
+                // ajax call with id as param to delete specific etf
+                $.ajax({
+                    url: apiEtfUrl + id + "?token=" + $("#token").val(),
+                    type: "DELETE",
+                    success: function(obj) {
+                        // deleted object, flash message
+                        $("#etf-error-message").html(obj.message);
+                        setTimeout(function() {
+                            $("#etf-error-message").html("");
+                        }, 4000);
+                        renderEtfTable() 
+                    }
+                });    
+                
+            } else {
+                // user did not confirm, cancel
+                return;
+            }
+        };
+        
+        // default state
+        nonLoggedInDisplay();
+        
+        if (tokenCookie) {
+            // there are cookies, try to get user and log them in
+            getUserFromToken()
+        };
+        
+        
+    </script>
+</body>
+
+</html>
