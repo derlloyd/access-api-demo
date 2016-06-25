@@ -13,7 +13,8 @@
         As a last step, create an independent html page that uses Javascript / jQuery to login to the REST API, add a new product and request details from one of those added products.
     </div>
     <h1>ETF External Website</h1>
-    
+        
+        <h3 id="api-error" class="alert alert-info">API is offline, please check back later</h3>
         <div class="container">
             <h3 id="not-logged-in-header">Login or Signup to View/Add/Delete</h3>
             <h3 id="logged-in-header">Logged In</h3>
@@ -69,7 +70,26 @@
         var signoutUrl = apiUrl + "/auth/signout";
         var getuserUrl = apiUrl + "/auth/getuser";
         var apiEtfUrl = apiUrl + "/api/etfs";
+        var pingUrl = apiUrl + "/public/ping.html";
         var tokenUrlQuery = "?token=" + $("#token").val();
+        
+        // verify if api is online using IIFE
+        (function checkApi() {
+            $.ajax({
+                url: loginUrl,
+                type: "POST",
+                error: function(err) {
+                    // console.log("error, offline: ", err);
+                    // error, show error message
+                    $('#api-error').show();
+                },
+                success: function(result) {
+                    // console.log("server is online: ", result);
+                    // some result exists, server is online, no error message
+                    $('#api-error').hide();
+                }
+            })
+        } ());
         
         // get all cookies, find the TOKEN value
         // document.cookie is a string cookie1=value; cookie2=value; cookie3=value;
