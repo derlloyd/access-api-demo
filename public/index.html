@@ -14,7 +14,7 @@
     </div>
     <h1>ETF External Website</h1>
         
-        <h3 id="api-error" class="alert alert-info">API is offline, please check back later</h3>
+        <h3 id="api-error" class="alert alert-warning"></h3>
         <div class="container">
             <h3 id="not-logged-in-header">Login or Signup to View/Add/Delete</h3>
             <h3 id="logged-in-header">Logged In</h3>
@@ -81,11 +81,13 @@
                 error: function(err) {
                     // console.log("error, offline: ", err);
                     // error, show error message
+                    $('#api-error').html("API is offline, please check back later");
                     $('#api-error').show();
                 },
                 success: function(result) {
                     // console.log("server is online: ", result);
                     // some result exists, server is online, no error message
+                    $('#api-error').html("");
                     $('#api-error').hide();
                 }
             })
